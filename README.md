@@ -9,7 +9,7 @@ Add a button to the character sheet to track tag team use.
 # Features
 
 *   **Tag Team Integration:** Adds a button to the character sheet to easily trigger the Tag Team move.
-*   **Resource Management:** Validates if the character has the required 3 Hope and tracks usage per session.
+*   **Resource Management:** Validates if the character has the required 3 Hope.
 
 # How To 
 
