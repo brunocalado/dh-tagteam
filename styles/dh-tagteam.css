@@ -1,0 +1,161 @@
+/* Prevents global leakage by scoping layout adjustments to character details that contain the injected button. */
+.character-details:has(.tag-team-button) {
+    display: flex !important;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+/* Button namespace and state rules */
+.tag-team-button {
+    background: rgba(0, 0, 0, 0.4);
+    color: #dfb45d;
+    border: 1px solid #dfb45d;
+    padding: 8px 16px;
+    border-radius: 8px;
+    font-size: 12px;
+    font-weight: bold;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    cursor: pointer;
+    transition: all 150ms cubic-bezier(0.16, 1, 0.3, 1);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+    white-space: nowrap;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    user-select: none;
+    flex-shrink: 0;
+    margin-left: auto;
+    order: 999;
+
+    &:focus-visible {
+        outline: 2px solid #dfb45d;
+        outline-offset: 2px;
+    }
+
+    /* Ready state */
+    &[data-used="false"] {
+        animation: tagTeamReadyGlow 2.5s infinite ease-in-out;
+
+        &:hover:not(:disabled) {
+            background: #dfb45d;
+            color: #111417;
+            box-shadow: 0 4px 12px rgba(223, 180, 93, 0.25);
+            transform: translateY(-2px);
+        }
+
+        &:active:not(:disabled) {
+            background: #c29a4a;
+            border-color: #c29a4a;
+            color: #111417;
+            transform: translateY(0);
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+        }
+    }
+
+    /* Used state */
+    &[data-used="true"] {
+        background: rgba(0, 0, 0, 0.6);
+        color: #a1a1aa;
+        border-color: #52525b;
+        box-shadow: inset 0 2px 4px rgba(0,0,0,0.5);
+        cursor: not-allowed;
+        opacity: 1;
+        pointer-events: none;
+    }
+
+    /* Insufficient resources state */
+    &[data-used="no-hope"],
+    &[data-used="no-hope"]:disabled {
+        background: rgba(0, 0, 0, 0.4);
+        color: #dfb45d;
+        border: 1px solid #dfb45d;
+        cursor: not-allowed;
+        opacity: 0.8;
+        pointer-events: auto; /* Retains pointer events to allow tooltips on disabled elements */
+    }
+}
+
+/* Chat card namespace and structural styles */
+.dh-tagteam-card {
+    border: 2px solid #C9A060;
+    border-radius: 8px;
+    overflow: hidden;
+    margin: 8px 0;
+
+    .dh-tagteam-header {
+        background: #191919 !important;
+        padding: 8px;
+        border-bottom: 2px solid #C9A060;
+
+        .dh-tagteam-title {
+            margin: 0;
+            font-weight: bold;
+            color: #C9A060 !important;
+            font-family: 'Aleo', serif;
+            text-align: center;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            width: 100%;
+        }
+    }
+
+    .dh-tagteam-content {
+        background-repeat: no-repeat;
+        background-position: center 20%;
+        background-size: cover;
+        padding: 20px;
+        min-height: 150px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        position: relative;
+        background-color: #111;
+
+        &.dh-tagteam-reset-bg {
+            background-image: url('../../icons/magic/light/explosion-star-glow-yellow.webp');
+        }
+
+        .dh-tagteam-overlay {
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0, 0, 0, 0.75);
+            z-index: 0;
+        }
+
+        .dh-tagteam-inner {
+            position: relative;
+            z-index: 1;
+            width: 100%;
+
+            .dh-tagteam-actor-name {
+                color: #ffffff;
+                font-size: 1.5em;
+                font-weight: 800;
+                margin-bottom: 5px;
+                text-transform: uppercase;
+                font-family: 'Aleo', serif;
+                text-shadow: 2px 2px 0 #000;
+            }
+
+            .dh-tagteam-action-text {
+                color: #e0e0e0;
+                font-size: 1.1em;
+                margin-bottom: 15px;
+                font-weight: bold;
+                background: rgba(0,0,0,0.6);
+                display: inline-block;
+                padding: 4px 12px;
+                border-radius: 4px;
+
+                .dh-tagteam-highlight {
+                    color: #C9A060;
+                }
+            }
+        }
+    }
+}
