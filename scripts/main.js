@@ -4,13 +4,58 @@
 
 const MODULE_ID = 'dh-tagteam';
 const FLAG_KEY = 'tagTeamUsed';
+const DEFAULT_HOPE_COST = 3;
+
+/**
+ * Resolves the hope cost from the actor's class feature.
+ * Looks for a class item → its hope feature UUID → the action's hope cost.
+ * @param {Actor} actor - The character actor.
+ * @returns {Promise<number>} The hope cost, or DEFAULT_HOPE_COST as fallback.
+ */
+async function _getHopeCost(actor) {
+    try {
+        const classItem = actor.items.find(i => i.type === 'class');
+        if (!classItem) return DEFAULT_HOPE_COST;
+
+        const features = classItem.system?.features;
+        if (!Array.isArray(features)) return DEFAULT_HOPE_COST;
+
+        const hopeFeature = features.find(f => f.type === 'hope');
+        if (!hopeFeature?.item) return DEFAULT_HOPE_COST;
+
+        const itemRef = hopeFeature.item;
+        const uuid = typeof itemRef === 'string' ? itemRef : itemRef?.uuid;
+        if (!uuid) return DEFAULT_HOPE_COST;
+
+        const hopeItem = await fromUuid(uuid);
+        if (!hopeItem) return DEFAULT_HOPE_COST;
+
+        const actions = hopeItem.system?.actions;
+        if (!actions) return DEFAULT_HOPE_COST;
+
+        const actionEntries = actions instanceof Map || typeof actions.values === 'function'
+            ? [...actions.values()]
+            : Object.values(actions);
+
+        for (const action of actionEntries) {
+            const costArray = Array.isArray(action.cost) ? action.cost
+                : (action.cost instanceof Map || typeof action.cost?.values === 'function') ? [...action.cost.values()]
+                : action.cost ? Object.values(action.cost) : [];
+            const hopeCost = costArray.find(c => c.key === 'hope');
+            if (hopeCost) return hopeCost.value ?? DEFAULT_HOPE_COST;
+        }
+    } catch (e) {
+        console.warn(`${MODULE_ID} | Failed to resolve hope cost, using default`, e);
+    }
+    return DEFAULT_HOPE_COST;
+}
 
 /**
  * Initializes the button injection after the core sheet HTML is built.
  */
-Hooks.on('renderCharacterSheet', (app, html, data) => {
+Hooks.on('renderCharacterSheet', async (app, html, data) => {
     const form = html instanceof jQuery ? html[0] : html;
-    _injectTagTeamButton(form, app);
+    await _injectTagTeamButton(form, app);
 });
 
 /**
@@ -18,7 +63,7 @@ Hooks.on('renderCharacterSheet', (app, html, data) => {
  * @param {HTMLElement} form - The form element from the sheet.
  * @param {Application} app - The sheet application containing the actor reference.
  */
-function _injectTagTeamButton(form, app) {
+async function _injectTagTeamButton(form, app) {
     if (!form || !app || !app.document) return;
 
     const actor = app.document;
@@ -31,6 +76,7 @@ function _injectTagTeamButton(form, app) {
 
     const isUsed = actor.getFlag(MODULE_ID, FLAG_KEY) || false;
     const hopeValue = actor.system?.resources?.hope?.value || 0;
+    const hopeCost = await _getHopeCost(actor);
 
     const button = document.createElement('button');
     button.type = 'button';
@@ -50,10 +96,10 @@ function _injectTagTeamButton(form, app) {
             button.style.pointerEvents = 'auto'; // Ensures tooltip displays
             button.style.cursor = 'not-allowed';
         }
-    } else if (hopeValue < 3) {
+    } else if (hopeValue < hopeCost) {
         button.dataset.used = 'no-hope';
         button.innerHTML = 'Tag Team (No Hope)';
-        button.title = 'Requires 3 Hope to use';
+        button.title = `Requires ${hopeCost} Hope to use`;
         button.disabled = true;
     } else {
         button.dataset.used = 'false';
