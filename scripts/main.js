@@ -6,6 +6,25 @@ const MODULE_ID = 'dh-tagteam';
 const FLAG_KEY = 'tagTeamUsed';
 
 /**
+ * Registers module settings.
+ */
+Hooks.once('init', () => {
+    game.settings.register(MODULE_ID, 'buttonPlacement', {
+        name: 'Button Placement',
+        hint: 'Choose where the Tag Team button appears on the character sheet.',
+        scope: 'world',
+        config: true,
+        type: String,
+        default: 'character-details',
+        choices: {
+            'character-details': 'Character Details (default)',
+            'name-row': 'Next to Actor Name'
+        },
+        requiresReload: true
+    });
+});
+
+/**
  * Initializes the button injection after the core sheet HTML is built.
  */
 Hooks.on('renderCharacterSheet', (app, html, data) => {
@@ -24,10 +43,10 @@ function _injectTagTeamButton(form, app) {
     const actor = app.document;
     if (actor.type !== 'character') return;
 
-    const characterDetails = form.querySelector('.character-details');
-    if (!characterDetails) return;
+    // Prevent duplicate injection
+    if (form.querySelector('.tag-team-button')) return;
 
-    if (characterDetails.querySelector('.tag-team-button')) return;
+    const placement = game.settings.get(MODULE_ID, 'buttonPlacement');
 
     const isUsed = actor.getFlag(MODULE_ID, FLAG_KEY) || false;
     const hopeValue = actor.system?.resources?.hope?.value || 0;
@@ -36,9 +55,11 @@ function _injectTagTeamButton(form, app) {
     button.type = 'button';
     button.className = 'tag-team-button';
 
+    const nameRowMode = placement === 'name-row';
+
     if (isUsed) {
         button.dataset.used = 'true';
-        button.innerHTML = 'Tag Team (Used)';
+        button.innerHTML = nameRowMode ? 'Tag Team<br>(Used)' : 'Tag Team (Used)';
         if (game.user.isGM) {
             button.title = 'GM: Click to reset for this character';
             button.disabled = false;
@@ -52,12 +73,12 @@ function _injectTagTeamButton(form, app) {
         }
     } else if (hopeValue < 3) {
         button.dataset.used = 'no-hope';
-        button.innerHTML = 'Tag Team (No Hope)';
+        button.innerHTML = nameRowMode ? 'Tag Team<br>(No Hope)' : 'Tag Team (No Hope)';
         button.title = 'Requires 3 Hope to use';
         button.disabled = true;
     } else {
         button.dataset.used = 'false';
-        button.innerHTML = 'Tag Team (Ready)';
+        button.innerHTML = nameRowMode ? 'Tag Team<br>(Ready)' : 'Tag Team (Ready)';
         button.title = 'Use Tag Team';
         button.disabled = false;
     }
@@ -68,14 +89,27 @@ function _injectTagTeamButton(form, app) {
         _onTagTeamClick(actor, button);
     });
 
-    characterDetails.style.display = 'flex';
-    characterDetails.style.alignItems = 'center';
-    characterDetails.style.gap = 'var(--space-8, 8px)';
+    if (placement === 'name-row') {
+        const nameRow = form.querySelector('.name-row');
+        if (!nameRow) return;
 
-    button.style.marginLeft = 'auto';
-    button.style.flexShrink = '0';
+        nameRow.classList.add('dh-tagteam-name-row');
+        const actorName = nameRow.querySelector('.actor-name.input');
+        if (actorName) actorName.after(button);
+        else nameRow.appendChild(button);
+    } else {
+        const characterDetails = form.querySelector('.character-details');
+        if (!characterDetails) return;
 
-    characterDetails.appendChild(button);
+        characterDetails.style.display = 'flex';
+        characterDetails.style.alignItems = 'center';
+        characterDetails.style.gap = 'var(--space-8, 8px)';
+
+        button.style.marginLeft = 'auto';
+        button.style.flexShrink = '0';
+
+        characterDetails.appendChild(button);
+    }
 }
 
 /**
@@ -95,7 +129,7 @@ async function _onTagTeamClick(actor, button) {
     }
 
     // Plays the sound locally for the triggering user
-    AudioHelper.play({ src: 'modules/dh-tagteam/assets/sfx/pipchange.mp3', volume: 0.5, autoplay: true }, false);
+    foundry.audio.AudioHelper.play({ src: 'modules/dh-tagteam/assets/sfx/pipchange.mp3', volume: 0.5, autoplay: true }, false);
 
     _sendTagTeamMessage(actor);
 

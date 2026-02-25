@@ -88,6 +88,36 @@
     }
 }
 
+/* Name-row placement variant */
+.name-row.dh-tagteam-name-row {
+    display: flex;
+    flex-wrap: nowrap;
+    align-items: center;
+
+    .actor-name.input {
+        flex: 1 1 0;
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .tag-team-button {
+        margin-left: 2px;
+        margin-right: 4px;
+        padding: 4px 10px;
+        height: 34px;
+        font-size: 10px;
+        line-height: 1.2;
+        white-space: normal;
+        text-align: center;
+        order: unset;
+    }
+
+    .level-div {
+        flex-shrink: 0;
+    }
+}
+
 /* Chat card namespace and structural styles */
 .dh-tagteam-card {
     border: 2px solid #C9A060;

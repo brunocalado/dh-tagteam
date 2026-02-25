@@ -1,7 +1,7 @@
 {
   "id": "dh-tagteam",
   "title": "Daggerheart: Tag Team",  
-  "version": "0.0.4",
+  "version": "0.0.5",
   "description": "Add a Tag Team indicator to the Character Seet.",  
   "compatibility": {
     "minimum": "13",
