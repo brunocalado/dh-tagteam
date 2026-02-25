@@ -3,7 +3,7 @@
 Add a button to the character sheet to track tag team use.
 
 <p align="center">
-  <img width="700" src="docs/preview.webp">
+  <img width="900" src="docs/preview.webp">
 </p>
 
 # Features
