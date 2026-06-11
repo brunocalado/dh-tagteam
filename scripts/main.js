@@ -2,75 +2,71 @@
  * Injects a state-tracked Tag Team button into Daggerheart character sheets.
  */
 
-const MODULE_ID = 'dh-tagteam';
-const FLAG_KEY = 'tagTeamUsed';
+import { MODULE_ID, FLAG_KEY } from "./constants.js";
 
 /**
  * Initializes the button injection after the core sheet HTML is built.
+ * Called from the renderCharacterSheet hook.
+ * @param {foundry.applications.api.ApplicationV2} app - The character sheet application.
+ * @param {HTMLElement} html - The rendered root element.
  */
-Hooks.on('renderCharacterSheet', (app, html, data) => {
-    const form = html instanceof jQuery ? html[0] : html;
-    _injectTagTeamButton(form, app);
+Hooks.on("renderCharacterSheet", (app, html) => {
+    _injectTagTeamButton(html, app);
 });
 
 /**
  * Handles the DOM injection of the Tag Team button.
- * @param {HTMLElement} form - The form element from the sheet.
- * @param {Application} app - The sheet application containing the actor reference.
+ * @param {HTMLElement} form - The root element of the rendered sheet.
+ * @param {foundry.applications.api.ApplicationV2} app - The sheet application containing the actor reference.
  */
 function _injectTagTeamButton(form, app) {
     if (!form || !app || !app.document) return;
 
     const actor = app.document;
-    if (actor.type !== 'character') return;
+    if (actor.type !== "character") return;
 
-    // Prevent duplicate injection
-    if (form.querySelector('.tag-team-button')) return;
+    // Prevent duplicate injection on re-renders
+    if (form.querySelector(".tag-team-button")) return;
 
-    const nameRow = form.querySelector('.name-row');
+    const nameRow = form.querySelector(".name-row");
     if (!nameRow) return;
 
-    const isUsed = actor.getFlag(MODULE_ID, FLAG_KEY) || false;
-    const hopeValue = actor.system?.resources?.hope?.value || 0;
+    const isUsed = actor.getFlag(MODULE_ID, FLAG_KEY) ?? false;
+    const hopeValue = actor.system?.resources?.hope?.value ?? 0;
 
-    const button = document.createElement('button');
-    button.type = 'button';
-    button.className = 'tag-team-button';
+    const button = document.createElement("button");
+    button.type = "button";
+    button.classList.add("dh-tagteam", "tag-team-button");
 
     if (isUsed) {
-        button.dataset.used = 'true';
-        button.innerHTML = 'Tag Team<br>(Used)';
+        button.dataset.used = "true";
+        button.innerHTML = "Tag Team<br>(Used)";
         if (game.user.isGM) {
-            button.title = 'GM: Click to reset for this character';
-            button.disabled = false;
-            button.style.pointerEvents = 'auto';
-            button.style.cursor = 'pointer';
+            button.dataset.gmReset = "true";
+            button.title = "GM: Click to reset for this character";
         } else {
-            button.title = 'Tag Team already used this session';
+            button.title = "Tag Team already used this session";
             button.disabled = true;
-            button.style.pointerEvents = 'auto'; // Ensures tooltip displays
-            button.style.cursor = 'not-allowed';
         }
     } else if (hopeValue < 3) {
-        button.dataset.used = 'no-hope';
-        button.innerHTML = 'Tag Team<br>(No Hope)';
-        button.title = 'Requires 3 Hope to use';
+        button.dataset.used = "no-hope";
+        button.innerHTML = "Tag Team<br>(No Hope)";
+        button.title = "Requires 3 Hope to use";
         button.disabled = true;
     } else {
-        button.dataset.used = 'false';
-        button.innerHTML = 'Tag Team<br>(Ready)';
-        button.title = 'Use Tag Team';
-        button.disabled = false;
+        button.dataset.used = "false";
+        button.innerHTML = "Tag Team<br>(Ready)";
+        button.title = "Use Tag Team";
     }
 
-    button.addEventListener('click', (event) => {
+    button.addEventListener("click", (event) => {
         event.preventDefault();
         event.stopPropagation();
         _onTagTeamClick(actor, button);
     });
 
-    nameRow.classList.add('dh-tagteam-name-row');
-    const actorName = nameRow.querySelector('.actor-name.input');
+    nameRow.classList.add("dh-tagteam", "dh-tagteam-name-row");
+    const actorName = nameRow.querySelector(".actor-name.input");
     if (actorName) actorName.after(button);
     else nameRow.appendChild(button);
 }
@@ -79,24 +75,22 @@ function _injectTagTeamButton(form, app) {
  * Processes the Tag Team button click event.
  * @param {Actor} actor - The character actor.
  * @param {HTMLElement} button - The button element.
+ * @returns {Promise<void>}
  */
 async function _onTagTeamClick(actor, button) {
-    const isUsed = actor.getFlag(MODULE_ID, FLAG_KEY) || false;
+    const isUsed = actor.getFlag(MODULE_ID, FLAG_KEY) ?? false;
 
     if (isUsed) {
-        if (game.user.isGM) {
-            await actor.setFlag(MODULE_ID, FLAG_KEY, false);
-            return;
-        }
+        if (game.user.isGM) await actor.setFlag(MODULE_ID, FLAG_KEY, false);
         return;
     }
 
-    // Plays the sound locally for the triggering user
-    foundry.audio.AudioHelper.play({ src: 'modules/dh-tagteam/assets/sfx/pipchange.mp3', volume: 0.5, autoplay: true }, false);
+    // Plays the sound locally for the triggering user only
+    foundry.audio.AudioHelper.play({ src: `modules/${MODULE_ID}/assets/sfx/pipchange.mp3`, volume: 0.5, autoplay: true }, false);
 
     _sendTagTeamMessage(actor);
 
-    // Awaits flag persistence to trigger automatic Foundry re-rendering
+    // Flag persistence triggers automatic AppV2 sheet re-render
     await actor.setFlag(MODULE_ID, FLAG_KEY, true);
 }
 
@@ -105,18 +99,15 @@ async function _onTagTeamClick(actor, button) {
  * @param {Actor} actor - The actor using Tag Team.
  */
 function _sendTagTeamMessage(actor) {
-    const actorName = actor.name;
-    const actorImg = actor.img;
-
     const content = `
-    <div class="chat-card dh-tagteam-card">
+    <div class="chat-card dh-tagteam dh-tagteam-card">
         <header class="card-header flexrow dh-tagteam-header">
             <h3 class="noborder dh-tagteam-title">Tag Team Activated</h3>
         </header>
-        <div class="card-content dh-tagteam-content" style="background-image: url('${actorImg}');">
+        <div class="card-content dh-tagteam-content" style="background-image: url('${actor.img}');">
             <div class="dh-tagteam-overlay"></div>
             <div class="dh-tagteam-inner">
-                <div class="dh-tagteam-actor-name">${actorName}</div>
+                <div class="dh-tagteam-actor-name">${actor.name}</div>
                 <div class="dh-tagteam-action-text"><span class="dh-tagteam-highlight">Stepped in to help!</span></div>
             </div>
         </div>
@@ -125,7 +116,7 @@ function _sendTagTeamMessage(actor) {
     ChatMessage.create({
         user: game.user.id,
         speaker: { actor: actor.id },
-        content: content,
+        content,
         style: CONST.CHAT_MESSAGE_STYLES.OTHER
     });
 }
@@ -136,7 +127,7 @@ function _sendTagTeamMessage(actor) {
  */
 function _sendResetMessage(resetCount) {
     const content = `
-    <div class="chat-card dh-tagteam-card">
+    <div class="chat-card dh-tagteam dh-tagteam-card">
         <header class="card-header flexrow dh-tagteam-header">
             <h3 class="noborder dh-tagteam-title">The Fall Ends</h3>
         </header>
@@ -152,13 +143,14 @@ function _sendResetMessage(resetCount) {
     ChatMessage.create({
         user: game.user.id,
         speaker: ChatMessage.getSpeaker(),
-        content: content,
+        content,
         style: CONST.CHAT_MESSAGE_STYLES.OTHER
     });
 }
 
 /**
- * Clears the Tag Team flag for all valid characters.
+ * Clears the Tag Team flag for all valid characters in a single batched update.
+ * @returns {Promise<void>}
  */
 async function _resetAllTagTeams() {
     if (!game.user.isGM) {
@@ -166,66 +158,57 @@ async function _resetAllTagTeams() {
         return;
     }
 
-    const characters = game.actors.filter(a => a.type === 'character');
-    let resetCount = 0;
+    const characters = game.actors.filter(a => a.type === "character" && a.getFlag(MODULE_ID, FLAG_KEY));
+    if (characters.length === 0) return;
 
-    for (const actor of characters) {
-        if (actor.getFlag(MODULE_ID, FLAG_KEY)) {
-            await actor.setFlag(MODULE_ID, FLAG_KEY, false);
-            resetCount++;
-        }
-    }
+    // Batch all flag clears into a single database round-trip
+    const updates = characters.map(a => ({ _id: a.id, [`flags.${MODULE_ID}.${FLAG_KEY}`]: false }));
+    await Actor.implementation.updateDocuments(updates);
 
-    if (resetCount > 0) {
-        _sendResetMessage(resetCount);
-    }
-
-    Object.values(ui.windows).forEach(win => {
-        if (win.document && win.document.type === 'character') {
-            win.render(false);
-        }
-    });
+    _sendResetMessage(characters.length);
 }
 
 /**
  * Resets the Tag Team flag upon completing a long rest.
+ * Called from the daggerheartLongRest hook.
+ * @param {Actor} actor - The actor completing the long rest.
  */
-Hooks.on('daggerheartLongRest', (actor) => {
-    if (actor.type === 'character') {
+Hooks.on("daggerheartLongRest", (actor) => {
+    if (actor.type === "character") {
+        // AppV2 sheet re-renders automatically on document update
         actor.setFlag(MODULE_ID, FLAG_KEY, false);
-        actor.sheet?.render(false);
     }
 });
 
 /**
  * Injects the global reset button into the GM's Daggerheart Menu.
+ * Called from the renderDaggerheartMenu hook.
+ * @param {foundry.applications.api.ApplicationV2} app - The DaggerheartMenu application.
+ * @param {HTMLElement} html - The rendered root element.
  */
-Hooks.on("renderDaggerheartMenu", (app, html, data) => {
+Hooks.on("renderDaggerheartMenu", (app, html) => {
     if (!game.user.isGM) return;
 
-    const element = (html instanceof jQuery) ? html[0] : html;
     const myButton = document.createElement("button");
     myButton.type = "button";
     myButton.innerHTML = `<i class="fas fa-sync"></i> Reset All Tag Teams`;
-    myButton.classList.add("dh-custom-btn"); 
-    myButton.style.marginTop = "10px";
-    myButton.style.width = "100%";
+    myButton.classList.add("dh-tagteam", "dh-tagteam-menu-btn");
 
-    myButton.onclick = async (event) => {
+    myButton.addEventListener("click", async (event) => {
         event.preventDefault();
         await _resetAllTagTeams();
-    };
+    });
 
-    const fieldset = element.querySelector("fieldset");
+    const fieldset = html.querySelector("fieldset");
     if (fieldset) {
         const newFieldset = document.createElement("fieldset");
         const legend = document.createElement("legend");
-        legend.innerText = "Tag Team Module";
+        legend.textContent = "Tag Team Module";
         newFieldset.appendChild(legend);
         newFieldset.appendChild(myButton);
         fieldset.after(newFieldset);
     } else {
-        element.appendChild(myButton);
+        html.appendChild(myButton);
     }
 });
 
@@ -233,6 +216,6 @@ window.DHTagTeam = {
     onTagTeamClick: _onTagTeamClick,
     sendMessage: _sendTagTeamMessage,
     resetAll: _resetAllTagTeams,
-    FLAG_KEY: FLAG_KEY,
-    MODULE_ID: MODULE_ID
+    FLAG_KEY,
+    MODULE_ID
 };
