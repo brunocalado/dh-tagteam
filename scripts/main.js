@@ -5,6 +5,61 @@
 import { MODULE_ID, FLAG_KEY } from "./constants.js";
 
 /**
+ * Registers the module socket listener.
+ * Called from the init hook before world data is available.
+ */
+Hooks.on("init", () => {
+    game.socket.on(`module.${MODULE_ID}`, (data) => {
+        if (!game.user.isGM) return;
+        if (data.type === "openPartySheet") _openPartySheetForGM(data.partyActorId, data.initiatorId);
+    });
+});
+
+/**
+ * Opens the party actor sheet on this GM client, navigates to the Party Members tab,
+ * and triggers the Tag Team Roll dialog with all active Tag Team members pre-selected.
+ * The latest activator is set as the initiator. Accumulates selections across multiple
+ * player activations without resetting prior selections.
+ * Invoked via socket when a player activates Tag Team and belongs to a party.
+ * @param {string} partyActorId - The id of the party actor to open.
+ * @param {string} initiatorId - The id of the character who most recently activated Tag Team.
+ * @returns {Promise<void>}
+ */
+async function _openPartySheetForGM(partyActorId, initiatorId) {
+    const partyActor = game.actors.get(partyActorId);
+    if (!partyActor) return;
+
+    // Collect all party members with an active Tag Team flag, always including the
+    // triggering actor to guard against race conditions between flag update and socket.
+    const activeMemberIds = new Set(
+        [
+            ...(partyActor.system.partyMembers ?? [])
+                .filter(m => game.actors.get(m._id)?.getFlag(MODULE_ID, FLAG_KEY))
+                .map(m => m._id),
+            initiatorId
+        ].filter(Boolean)
+    );
+
+    // Register before clicking so the hook is ready when the dialog renders.
+    // The tagTeamRoll button always creates a fresh dialog instance (all members
+    // start unselected), so we restore the full accumulated selection here.
+    Hooks.once("renderTagTeamDialog", (app) => {
+        for (const member of app.partyMembers) {
+            member.selected = activeMemberIds.has(member.id);
+        }
+        if (initiatorId) {
+            if (!app.initiator) app.initiator = { cost: 3 };
+            app.initiator.memberId = initiatorId;
+        }
+        app.render();
+    });
+
+    await partyActor.sheet.render({ force: true });
+    partyActor.sheet.changeTab("partyMembers", "primary");
+    partyActor.sheet.element.querySelector('button[data-action="tagTeamRoll"]')?.click();
+}
+
+/**
  * Initializes the button injection after the core sheet HTML is built.
  * Called from the renderCharacterSheet hook.
  * @param {foundry.applications.api.ApplicationV2} app - The character sheet application.
@@ -92,6 +147,14 @@ async function _onTagTeamClick(actor, button) {
 
     // Flag persistence triggers automatic AppV2 sheet re-render
     await actor.setFlag(MODULE_ID, FLAG_KEY, true);
+
+    // If the character belongs to a party, notify all active GMs to open the party sheet
+    const party = game.actors.find(
+        a => a.type === "party" && a.system.partyMembers?.some(m => m._id === actor.id)
+    );
+    if (party) {
+        game.socket.emit(`module.${MODULE_ID}`, { type: "openPartySheet", partyActorId: party.id, initiatorId: actor.id });
+    }
 }
 
 /**

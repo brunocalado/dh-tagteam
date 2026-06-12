@@ -1,3 +1,7 @@
+# 0.1.1
+
+[Added] When a player activates Tag Team, the module now automatically opens the party sheet for the GM on the Party Members tab and triggers the Tag Team Roll dialog with all active Tag Team participants pre-selected. The last player to activate is pre-set as the initiator. Multiple activations accumulate: each new activation adds that player's card without removing previous selections.
+
 # 0.1.0
 
 [Changed] Migrated module to full Foundry VTT v14 compliance.

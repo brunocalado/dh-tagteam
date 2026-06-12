@@ -13,6 +13,7 @@ Add a button to the character sheet to track tag team use.
 
 *   **Tag Team Integration:** Adds a button to the character sheet to easily trigger the Tag Team move.
 *   **Resource Management:** Validates if the character has the required 3 Hope.
+*   **GM Automation:** When a player activates Tag Team, the GM's party sheet opens automatically on the Party Members tab and the Tag Team Roll dialog launches with the activating character pre-selected as the initiator. Multiple activations accumulate: each additional player who activates Tag Team is added to the pre-selection alongside the previous ones.
 
 # How To 
 
