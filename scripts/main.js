@@ -244,6 +244,89 @@ Hooks.on("daggerheartLongRest", (actor) => {
 });
 
 /**
+ * Injects the reset icon button and tag team status indicators into the party sheet.
+ * The Daggerheart party sheet class is named `Party`, so Foundry fires `renderParty`.
+ * @param {foundry.applications.api.ApplicationV2} app - The party sheet application.
+ * @param {HTMLElement} html - The rendered root element.
+ */
+Hooks.on("renderParty", (app, html) => {
+    if (game.user.isGM) _injectPartyResetButton(html);
+    _injectTagTeamStatusIndicators(html);
+});
+
+/**
+ * Injects a compact reset icon button immediately after the Tag Team Roll button in the party
+ * sheet actions bar. Clicking it resets the Tag Team Used flag on all characters, identical
+ * to the global reset in the Daggerheart Menu.
+ * @param {HTMLElement} html - The rendered root element.
+ */
+function _injectPartyResetButton(html) {
+    if (html.querySelector(".dh-tagteam-party-reset")) return;
+
+    const tagTeamBtn = html.querySelector('button[data-action="tagTeamRoll"]');
+    if (!tagTeamBtn) return;
+
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.classList.add("dh-tagteam", "dh-tagteam-party-reset");
+    btn.innerHTML = `<i class="fa-solid fa-rotate-left"></i>`;
+    btn.dataset.tooltip = "Reset All Tag Teams — clears the Tag Team Used state from every character";
+
+    btn.addEventListener("click", async (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        await _resetAllTagTeams();
+    });
+
+    tagTeamBtn.after(btn);
+}
+
+/**
+ * Injects a tag team status badge above the damage threshold section for each
+ * character-type party member. Shows Ready, Used, or No Hope based on the current flag
+ * and hope resource value.
+ * @param {HTMLElement} html - The rendered root element.
+ */
+function _injectTagTeamStatusIndicators(html) {
+    const memberItems = html.querySelectorAll("li.actor-resources");
+    for (const li of memberItems) {
+        if (li.querySelector(".dh-tagteam-status-indicator")) continue;
+
+        const nameLink = li.querySelector('a[data-action="openDocument"]');
+        if (!nameLink?.dataset.uuid) continue;
+
+        const rawUuid = nameLink.dataset.uuid;
+        const actorId = rawUuid.startsWith("Actor.") ? rawUuid.slice(6) : null;
+        if (!actorId) continue;
+
+        const actor = game.actors.get(actorId);
+        if (!actor || actor.type !== "character") continue;
+
+        const isUsed = actor.getFlag(MODULE_ID, FLAG_KEY) ?? false;
+        const hopeValue = actor.system?.resources?.hope?.value ?? 0;
+
+        let statusClass, statusText;
+        if (isUsed) {
+            statusClass = "status-used";
+            statusText = "Tag Team Used";
+        } else if (hopeValue < 3) {
+            statusClass = "status-no-hope";
+            statusText = "No Hope";
+        } else {
+            statusClass = "status-ready";
+            statusText = "Tag Team Ready";
+        }
+
+        const indicator = document.createElement("div");
+        indicator.classList.add("dh-tagteam", "dh-tagteam-status-indicator", statusClass);
+        indicator.textContent = statusText;
+
+        const thresholdSection = li.querySelector(".threshold-section");
+        if (thresholdSection) thresholdSection.before(indicator);
+    }
+}
+
+/**
  * Injects the global reset button into the GM's Daggerheart Menu.
  * Called from the renderDaggerheartMenu hook.
  * @param {foundry.applications.api.ApplicationV2} app - The DaggerheartMenu application.

@@ -187,6 +187,52 @@
         color: #C9A060;
     }
 
+    /* === Party sheet reset icon button — flex sibling of the system action buttons === */
+    &.dh-tagteam-party-reset {
+        flex: none;
+        padding: 4px 10px;
+        align-self: center;
+
+        i { font-size: 14px; }
+    }
+
+    /* === Party sheet tag team status indicator ===
+       .threshold-section is position:absolute; bottom:-2px inside a relative frame,
+       so the indicator must also be absolute to sit visually above it. */
+    &.dh-tagteam-status-indicator {
+        position: absolute;
+        bottom: 24px;
+        left: 50%;
+        transform: translateX(-50%);
+        z-index: 1;
+        white-space: nowrap;
+        font-size: 8px;
+        font-weight: bold;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        line-height: 1.2;
+        padding: 2px 5px;
+        border-radius: 3px;
+
+        &.status-ready {
+            color: #4ade80;
+            background: rgba(0, 0, 0, 0.65);
+            border: 1px solid rgba(74, 222, 128, 0.5);
+        }
+
+        &.status-used {
+            color: #a1a1aa;
+            background: rgba(0, 0, 0, 0.65);
+            border: 1px solid rgba(161, 161, 170, 0.4);
+        }
+
+        &.status-no-hope {
+            color: #dfb45d;
+            background: rgba(0, 0, 0, 0.65);
+            border: 1px solid rgba(223, 180, 93, 0.4);
+        }
+    }
+
     /* === DaggerheartMenu reset button === */
     &.dh-tagteam-menu-btn {
         margin-top: 10px;

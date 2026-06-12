@@ -1,3 +1,8 @@
+# 0.1.2
+
+[Added] Party sheet: a reset icon button (↺) now appears immediately to the right of the Tag Team Roll button. GM-only; performs the same global reset as the Daggerheart Menu button, with a tooltip explaining the action.
+[Added] Party sheet: each character-type party member now shows a tag team status badge above the damage threshold section — "Tag Team Ready" (green), "Tag Team Used" (grey), or "No Hope" (amber).
+
 # 0.1.1
 
 [Added] When a player activates Tag Team, the module now automatically opens the party sheet for the GM on the Party Members tab and triggers the Tag Team Roll dialog with all active Tag Team participants pre-selected. The last player to activate is pre-set as the initiator. Multiple activations accumulate: each new activation adds that player's card without removing previous selections.
